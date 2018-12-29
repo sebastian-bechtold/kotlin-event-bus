@@ -1,4 +1,4 @@
-package com.sebastianbechtold.vectro
+package com.sebastianbechtold.eventbus
 
 var eb = EventBus()
 
