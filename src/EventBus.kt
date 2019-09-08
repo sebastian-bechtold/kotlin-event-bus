@@ -1,3 +1,5 @@
+// Last change: 2019-09-08
+
 package com.sebastianbechtold.eventbus
 
 import java.util.*
@@ -9,12 +11,12 @@ var deb = EventBus()
 
 class EventBus {
 
-	inner class HandlerEntry<T>(val handler : (T) -> Unit, val priority : Int = 0) {
+	inner class HandlerEntry<T>(val handler : (T) -> Boolean, val priority : Int = 0) {
 	}
 
 	var _eventHandlers: HashMap<Any, Any> = HashMap()
 
-	inline fun <reified T> addHandler(noinline listener: (T) -> Unit, priority : Int = 0) {
+	inline fun <reified T> addHandler(noinline listener: (T) -> Boolean, priority : Int = 0) {
 
 		var handlers = _eventHandlers.get(T::class);
 
@@ -83,7 +85,11 @@ class EventBus {
 		}
 
 		for(handlerEntry in handlers as ArrayList<HandlerEntry<T>>) {
-			handlerEntry.handler(event)
+			var carryOn = handlerEntry.handler(event)
+
+			if (!carryOn) {
+				break
+			}
 		}
 	}
 }
