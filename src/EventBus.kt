@@ -1,4 +1,4 @@
-// Last change: 2019-09-08
+
 
 package com.sebastianbechtold.eventbus
 
@@ -11,14 +11,12 @@ var deb = EventBus()
 
 class EventBus {
 
-	inner class HandlerEntry<T>(val handler : (T) -> Boolean, val priority : Int = 0) {
+	inner class HandlerEntry<T>(val handler : (T) -> Unit, val priority : Int = 0) {
 	}
 
 	var _eventHandlers: HashMap<Any, Any> = HashMap()
 
-
-
-	inline fun <reified T> addHandler(noinline listener: (T) -> Boolean, priority : Int = 0) {
+	inline fun <reified T> addHandler(noinline listener: (T) -> Unit, priority : Int = 0) {
 
 		var handlers = _eventHandlers.get(T::class);
 
@@ -54,7 +52,7 @@ class EventBus {
 	}
 
 
-	inline fun <reified T> removeHandler(noinline listener: (T) -> Boolean) {
+	inline fun <reified T> removeHandler(noinline listener: (T) -> Unit) {
 
 		var handlers = _eventHandlers.get(T::class);
 
@@ -86,21 +84,14 @@ class EventBus {
 			return;
 		}
 
-		var handlersCopy = ArrayList<HandlerEntry<T>>()
-
-		// NOTE: Here we create a copy of list of handlers for the current event
-		// and run the handler calling loop on this copy instead of on the origin list.
-		// This prevents ConcurrentModificationExceptions in the case that a handler for the currently
-		// processed event is added or removed *within* the event firing loop (i.e. by one of the handlers).
-
-		handlersCopy.addAll(handlers as ArrayList<HandlerEntry<T>>)
+		// NOTE: We create a copy of the handlers list here and use the copy to fire the events
+		// in order to avoid ConcurrentModificationExceptions if the code which is executed by
+		// a handlers adds or removes event handlers from this event bus.
+		val handlersCopy = ArrayList<HandlerEntry<T>>()
+		handlersCopy.addAll(handlers  as ArrayList<HandlerEntry<T>>)
 
 		for(handlerEntry in handlersCopy) {
-			var carryOn = handlerEntry.handler(event)
-
-			if (!carryOn) {
-				break
-			}
+			handlerEntry.handler(event)
 		}
 	}
 }
