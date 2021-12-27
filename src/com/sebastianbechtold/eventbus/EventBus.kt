@@ -1,23 +1,19 @@
 package com.sebastianbechtold.eventbus
 
 import java.util.*
-import kotlin.Comparator
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-// A default EventBus instance:
-var deb = EventBus()
 
 class EventBus {
 
-	inner class HandlerEntry<T>(val handler : (T) -> Unit, val priority : Int = 0) {
-	}
+	inner class HandlerEntry<T>(val handler : (T) -> Unit, val priority : Int = 0) {}
 
-	var _eventHandlers: HashMap<Any, Any> = HashMap()
+	var _eventHandlers: HashMap<Pair<Any,Any>, Any> = HashMap()
 
-	inline fun <reified T> addHandler(noinline listener: (T) -> Unit, priority : Int = 0) {
+	inline fun <reified T> addHandler(noinline listener: (T) -> Unit, source : Any = "all", priority : Int = 0) {
 
-		var handlers = _eventHandlers.get(T::class) as ArrayList<HandlerEntry<T>>?
+		var handlers = _eventHandlers.get(Pair(T::class, source)) as ArrayList<HandlerEntry<T>>?
 
 		if (handlers == null) {
 			handlers = ArrayList()
@@ -42,18 +38,17 @@ class EventBus {
 		// ... and reorder the list of handlers by their priorities:
 		Collections.sort(handlersClone, object : Comparator<HandlerEntry<T>> {
 			override fun compare(p0: HandlerEntry<T>, p1: HandlerEntry<T>): Int {
-
 				return p0.priority - p1.priority
 			}
 		})
 
-		_eventHandlers.put(T::class, handlersClone)
+		_eventHandlers.put(Pair(T::class, source), handlersClone)
 	}
 
 
-	inline fun <reified T> removeHandler(noinline listener: (T) -> Unit) {
+	inline fun <reified T> removeHandler(noinline listener: (T) -> Unit, source: Any = "all") {
 
-		var handlers = _eventHandlers.get(T::class) as ArrayList<HandlerEntry<T>>?
+		var handlers = _eventHandlers.get(Pair(T::class, source)) as ArrayList<HandlerEntry<T>>?
 
 		if (handlers == null) {
 			return;
@@ -75,21 +70,38 @@ class EventBus {
 
 		if (index >= 0) {
 			handlersClone.removeAt(index)
-			_eventHandlers.put(T::class, handlersClone)
+			_eventHandlers.put(Pair(T::class, source), handlersClone)
 		}
 	}
 
 
-	inline fun <reified T> fire(event: T) {
+	inline fun <reified T> fire(event: T, source : Any? = null) {
 
-		var handlers = _eventHandlers.get(T::class) as ArrayList<HandlerEntry<T>>?
+		if (source != null) {
 
-		if (handlers == null) {
-			return;
+			var sourceHandlers = _eventHandlers.get(Pair(T::class, source)) as ArrayList<HandlerEntry<T>>?
+
+			if (sourceHandlers != null) {
+
+				for (handlerEntry in sourceHandlers) {
+					handlerEntry.handler(event)
+				}
+
+			}
 		}
 
-		for(handlerEntry in handlers) {
-			handlerEntry.handler(event)
+
+		var allHandlers = _eventHandlers.get(Pair(T::class, "all")) as ArrayList<HandlerEntry<T>>?
+
+		if (allHandlers != null) {
+
+			for(handlerEntry in allHandlers) {
+				handlerEntry.handler(event)
+			}
 		}
+
+
+
+
 	}
 }
